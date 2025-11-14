@@ -1,9 +1,11 @@
 <script>
   let devices = [];
 
+  const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://127.0.0.1:4901';
+
   async function checkStatus() {
     try {
-      const res = await fetch('http://127.0.0.1:4901/status');
+      const res = await fetch(`${BACKEND_URL}/status`);
       const data = await res.json();
       devices = data;
     } catch {

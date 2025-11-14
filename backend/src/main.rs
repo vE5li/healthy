@@ -19,6 +19,8 @@ struct Args {
     /// Path to the devices configuration file
     #[arg(short, long, default_value = "devices.json")]
     config: String,
+    #[arg(short, long, default_value = "4901")]
+    port: u16,
 }
 
 #[derive(Deserialize)]
@@ -41,8 +43,6 @@ async fn ping_device(ip: String, state: DeviceState) {
 
     loop {
         let connected = pinger.ping(PingSequence(0), &[]).await.is_ok();
-
-        println!("Updating");
 
         {
             let mut map = state.lock().await;
@@ -86,6 +86,6 @@ async fn main() {
         .with_state(state)
         .layer(CorsLayer::permissive());
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4901").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", args.port)).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
