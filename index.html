@@ -20,15 +20,16 @@
         th, td {
             padding: 0.4rem 0.6472rem;
             text-align: left;
+            overflow: hidden;
         }
         th:nth-child(1), td:nth-child(1) {
             width: 30%;
         }
         th:nth-child(2), td:nth-child(2) {
-            width: 50%;
+            width: 55%;
         }
         th:nth-child(3), td:nth-child(3) {
-            width: 20%;
+            width: 15%;
         }
         th {
             background-color: #292929;
@@ -40,7 +41,7 @@
             color: #bbb;
         }
         tbody tr:nth-child(even) {
-            background-color: #323232;
+            background-color: #303030;
             color: #bbb;
         }
         .connected {
@@ -71,13 +72,12 @@
                 } else {
                     const rows = devices.map(device => {
                         const className = device.latency_milliseconds ? 'connected' : 'disconnected';
-                        const icon = device.latency_milliseconds ? '✓' : '✗';
-                        const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
                         const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
+                        const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
 
                         return `<tr>
                               <td>${device.name}</td>
-                              <td class=${className}>${icon} ${device.ip}</td>
+                              <td class=${className}>${device.ip}</td>
                               <td class=${latencyClassName}>${latency}</td>
                             </tr>`;
                     }).join('');
