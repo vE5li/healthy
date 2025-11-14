@@ -1,33 +1,91 @@
-use axum::{routing::get, Json, Router};
-use serde::Serialize;
-use std::process::Command;
+use std::collections::HashMap;
+use std::fs;
+use std::sync::Arc;
+use std::time::Duration;
+
+use axum::extract::State;
+use axum::routing::get;
+use axum::{Json, Router};
+use clap::Parser;
+use serde::{Deserialize, Serialize};
+use surge_ping::{Client, Config, PingIdentifier, PingSequence};
+use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 
+type DeviceState = Arc<Mutex<HashMap<String, bool>>>;
+
+#[derive(Parser)]
+struct Args {
+    /// Path to the devices configuration file
+    #[arg(short, long, default_value = "devices.json")]
+    config: String,
+}
+
+#[derive(Deserialize)]
+struct DeviceConfig {
+    devices: Vec<String>,
+}
+
 #[derive(Serialize)]
-struct Status {
+struct DeviceStatus {
+    ip: String,
     connected: bool,
 }
 
-async fn check_status() -> Json<Status> {
-    let output = Command::new("ping")
-        .args(["-c", "1", "-W", "1", "8.8.8.8"])
-        .output();
+async fn ping_device(ip: String, state: DeviceState) {
+    let client = Client::new(&Config::default()).unwrap();
 
-    let connected = output.map(|o| o.status.success()).unwrap_or(false);
-    Json(Status { connected })
+    let addr = ip.parse().unwrap();
+    let mut pinger = client.pinger(addr, PingIdentifier(24)).await;
+    pinger.timeout(Duration::from_secs(1));
+
+    loop {
+        let connected = pinger.ping(PingSequence(0), &[]).await.is_ok();
+
+        println!("Updating");
+
+        {
+            let mut map = state.lock().await;
+            map.insert(ip.clone(), connected);
+        }
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+}
+
+async fn get_status(State(state): State<DeviceState>) -> Json<Vec<DeviceStatus>> {
+    let map = state.lock().await;
+    let statuses = map
+        .iter()
+        .map(|(ip, connected)| DeviceStatus {
+            ip: ip.clone(),
+            connected: *connected,
+        })
+        .collect();
+    Json(statuses)
 }
 
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
+
+    let config_file = fs::read_to_string(&args.config).unwrap();
+    let config: DeviceConfig = serde_json::from_str(&config_file).unwrap();
+
+    let state: DeviceState = Arc::new(Mutex::new(HashMap::new()));
+
+    for device in config.devices {
+        let device_state = Arc::clone(&state);
+        tokio::spawn(async move {
+            ping_device(device, device_state).await;
+        });
+    }
+
     let app = Router::new()
-        .route("/status", get(check_status))
+        .route("/status", get(get_status))
+        .with_state(state)
         .layer(CorsLayer::permissive());
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4901")
-        .await
-        .unwrap();
-
-    println!("Backend running on http://127.0.0.1:4901");
-
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:4901").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

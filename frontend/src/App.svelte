@@ -1,28 +1,36 @@
 <script>
-  let connected = null;
+  let devices = [];
 
   async function checkStatus() {
     try {
       const res = await fetch('http://127.0.0.1:4901/status');
       const data = await res.json();
-      connected = data.connected;
+      devices = data;
     } catch {
-      connected = false;
+      devices = [];
     }
   }
 
   checkStatus();
-  setInterval(checkStatus, 5000);
+  setInterval(checkStatus, 500);
 </script>
 
 <main>
-  <h1>Connection Status</h1>
-  {#if connected === null}
-    <p>Checking...</p>
-  {:else if connected}
-    <p style="color: green;">✓ Connected to 8.8.8.8</p>
+  <h1>Device Status</h1>
+  {#if devices.length === 0}
+    <p>Loading...</p>
   {:else}
-    <p style="color: red;">✗ Not connected to 8.8.8.8</p>
+    <ul>
+      {#each devices as device}
+        <li>
+          {#if device.connected}
+            <span style="color: green;">✓ {device.ip}</span>
+          {:else}
+            <span style="color: red;">✗ {device.ip}</span>
+          {/if}
+        </li>
+      {/each}
+    </ul>
   {/if}
 </main>
 
@@ -30,5 +38,12 @@
   main {
     font-family: sans-serif;
     padding: 2rem;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    margin: 0.5rem 0;
   }
 </style>
