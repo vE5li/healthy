@@ -1,7 +1,8 @@
 <script>
   let devices = [];
 
-  const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://127.0.0.1:4901';
+  // Use environment variable for backend URL, fallback to localhost for development
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4901';
 
   async function checkStatus() {
     try {

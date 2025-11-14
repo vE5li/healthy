@@ -40,7 +40,7 @@
           version = "0.1.0";
           src = ./frontend;
           npmDepsHash = "sha256-0+Y7RfnDnwItVLWOOySMNErIVAoyBkz2D9NIoQL3eKo=";
-          BACKEND_URL = backendUrl;
+          VITE_BACKEND_URL = backendUrl;
           installPhase = ''
             mkdir -p $out
             cp -r dist/* $out/
