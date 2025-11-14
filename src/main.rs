@@ -5,17 +5,17 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::State;
-use axum::response::Html;
+use axum::http::header;
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use surge_ping::{Client, Config, ICMP, PingIdentifier, PingSequence};
+use surge_ping::{Client, Config, PingIdentifier, PingSequence, ICMP};
 use tokio::sync::Mutex;
 
 #[derive(Parser)]
 struct Args {
-    /// Path to the devices configuration file
     #[arg(short, long, default_value = "devices.json")]
     config: String,
     #[arg(short, long, default_value = "4901")]
@@ -83,14 +83,23 @@ async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
     }
 }
 
-async fn get_status(State(state): State<DeviceMap>) -> Json<Vec<DeviceStatus>> {
+async fn index() -> Html<&'static str> {
+    Html(include_str!("../index.html"))
+}
+
+async fn favicon() -> Response {
+    let favicon_bytes = include_bytes!("../favicon.svg");
+    (
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        favicon_bytes.as_slice(),
+    )
+        .into_response()
+}
+
+async fn status(State(state): State<DeviceMap>) -> Json<Vec<DeviceStatus>> {
     let map = state.lock().await;
     let statuses = map.values().cloned().collect();
     Json(statuses)
-}
-
-async fn index() -> Html<&'static str> {
-    Html(include_str!("../index.html"))
 }
 
 #[tokio::main]
@@ -111,9 +120,12 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(index))
-        .route("/status", get(get_status))
+        .route("/favicon.svg", get(favicon))
+        .route("/status", get(status))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", args.port)).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", args.port))
+        .await
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
