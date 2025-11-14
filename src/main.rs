@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,7 +39,7 @@ struct DeviceStatus {
     latency_milliseconds: Option<u128>,
 }
 
-type DeviceMap = Arc<Mutex<HashMap<String, DeviceStatus>>>;
+type DeviceMap = Arc<Mutex<BTreeMap<String, DeviceStatus>>>;
 
 async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
     let client = Client::new(&Config::default()).unwrap();
@@ -72,74 +72,7 @@ async fn get_status(State(state): State<DeviceMap>) -> Json<Vec<DeviceStatus>> {
 }
 
 async fn index() -> Html<&'static str> {
-    Html(
-        r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Status</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #333;
-        }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            border-radius: 4px;
-            background: #f5f5f5;
-        }
-        .connected {
-            color: green;
-        }
-        .disconnected {
-            color: red;
-        }
-    </style>
-</head>
-<body>
-    <h1>Device Status</h1>
-    <div id="status">Loading...</div>
-
-    <script>
-        async function checkStatus() {
-            try {
-                const res = await fetch('/status');
-                const devices = await res.json();
-
-                if (devices.length === 0) {
-                    document.getElementById('status').innerHTML = '<p>Loading...</p>';
-                } else {
-                    const html = '<ul>' + devices.map(device => {
-                        const className = device.latency_milliseconds ? 'connected' : 'disconnected';
-                        const icon = device.latency_milliseconds ? '✓' : '✗';
-                        const latency = device.latency_milliseconds ? `(${device.latency_milliseconds} ms)` : '';
-
-                        return `<li><span class="${className}">${icon} ${device.ip} ${latency}</span></li>`;
-                    }).join('') + '</ul>';
-                    document.getElementById('status').innerHTML = html;
-                }
-            } catch (err) {
-                document.getElementById('status').innerHTML = '<p>Error loading status</p>';
-            }
-        }
-
-        checkStatus();
-        setInterval(checkStatus, 500);
-    </script>
-</body>
-</html>"#,
-    )
+    Html(include_str!("../index.html"))
 }
 
 #[tokio::main]
@@ -149,7 +82,7 @@ async fn main() {
     let config_file = fs::read_to_string(&args.config).unwrap();
     let config: HomeConfig = serde_json::from_str(&config_file).unwrap();
 
-    let state: DeviceMap = Arc::new(Mutex::new(HashMap::new()));
+    let state: DeviceMap = Arc::new(Mutex::new(BTreeMap::new()));
 
     for device in config.devices {
         let device_state = Arc::clone(&state);

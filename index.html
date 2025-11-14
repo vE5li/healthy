@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Status</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #222;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th, td {
+            padding: 0.4rem 0.6472rem;
+            text-align: left;
+        }
+        th:nth-child(1), td:nth-child(1) {
+            width: 30%;
+        }
+        th:nth-child(2), td:nth-child(2) {
+            width: 50%;
+        }
+        th:nth-child(3), td:nth-child(3) {
+            width: 20%;
+        }
+        th {
+            background-color: #292929;
+            color: #999;
+            font-weight: bold;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #353535;
+            color: #bbb;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #323232;
+            color: #bbb;
+        }
+        .connected {
+            color: #42ff9b;
+        }
+        .disconnected {
+            color: #ff6142;
+        }
+        .latency-connected {
+            color: #7a7a7a;
+        }
+        .latency-disconnected {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading...</div>
+
+    <script>
+        async function checkStatus() {
+            try {
+                const res = await fetch('/status');
+                const devices = await res.json();
+
+                if (devices.length === 0) {
+                    document.getElementById('status').innerHTML = '<p>Loading...</p>';
+                } else {
+                    const rows = devices.map(device => {
+                        const className = device.latency_milliseconds ? 'connected' : 'disconnected';
+                        const icon = device.latency_milliseconds ? '✓' : '✗';
+                        const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
+                        const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
+
+                        return `<tr>
+                              <td>${device.name}</td>
+                              <td class=${className}>${icon} ${device.ip}</td>
+                              <td class=${latencyClassName}>${latency}</td>
+                            </tr>`;
+                    }).join('');
+
+                    const html = `<table>
+                      <thead>
+                        <tr>
+                          <th scope="col">Name</th>
+                          <th scope="col">Ip</th>
+                          <th scope="col">Latency</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${rows}
+                      </tbody>
+                    </table>`;
+                    document.getElementById('status').innerHTML = html;
+                }
+            } catch (err) {
+                document.getElementById('status').innerHTML = '<p>Error loading status</p>';
+            }
+        }
+
+        checkStatus();
+        setInterval(checkStatus, 500);
+    </script>
+</body>
+</html>

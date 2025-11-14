@@ -20,7 +20,6 @@
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
-          pkgs.nodejs
         ];
 
         # For any tools that need to see the rust toolchain src
@@ -47,14 +46,6 @@
 
           configFile = lib.mkOption {
             type = lib.types.path;
-            default = pkgs.writeText "devices.json" (
-              builtins.toJSON {
-                devices = [
-                  "8.8.8.8"
-                  "1.1.1.1"
-                ];
-              }
-            );
             description = "Path to the devices configuration file";
           };
 
