@@ -14,7 +14,7 @@
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [(import rust-overlay)];
       pkgs = (import nixpkgs) {inherit system overlays;};
-    in rec {
+    in {
       formatter = pkgs.alejandra;
 
       devShells.default = pkgs.mkShell {
@@ -90,7 +90,7 @@
               after = ["network.target"];
 
               serviceConfig = {
-                ExecStart = "${lib.getExe self.packages.${pkgs.system}.healthy-backend} --config ${configuration.configFile}";
+                ExecStart = "${lib.getExe' self.packages.${pkgs.system}.healthy-backend "backend"} --config ${configuration.configFile}";
                 Restart = "always";
                 DynamicUser = true;
                 AmbientCapabilities = "CAP_NET_RAW";
