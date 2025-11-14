@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,7 +10,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use surge_ping::{Client, Config, PingIdentifier, PingSequence};
+use surge_ping::{Client, Config, ICMP, PingIdentifier, PingSequence};
 use tokio::sync::Mutex;
 
 #[derive(Parser)]
@@ -42,12 +43,17 @@ struct DeviceStatus {
 type DeviceMap = Arc<Mutex<BTreeMap<String, DeviceStatus>>>;
 
 async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
-    let client = Client::new(&Config::default()).unwrap();
+    let addr: IpAddr = device.ip.parse().unwrap();
 
-    let addr = device.ip.parse().unwrap();
+    let kind = match addr.is_ipv6() {
+        true => ICMP::V6,
+        false => ICMP::V4,
+    };
+    let config = Config::builder().kind(kind).build();
+    let client = Client::new(&config).unwrap();
+
     let mut pinger = client.pinger(addr, PingIdentifier(24)).await;
     pinger.timeout(Duration::from_secs(1));
-
     let mut ping_sequence = 0;
 
     loop {
