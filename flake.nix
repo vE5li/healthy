@@ -14,7 +14,7 @@
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [(import rust-overlay)];
       pkgs = (import nixpkgs) {inherit system overlays;};
-    in {
+    in rec {
       formatter = pkgs.alejandra;
 
       devShells.default = pkgs.mkShell {
@@ -27,18 +27,18 @@
         RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
       };
 
-      packages.backend = pkgs.rustPlatform.buildRustPackage {
+      packages.healthy-backend = pkgs.rustPlatform.buildRustPackage {
         pname = "healthy-backend";
         version = "0.1.0";
         src = ./backend;
         cargoLock.lockFile = ./backend/Cargo.lock;
       };
 
-      packages.frontend = pkgs.buildNpmPackage {
+      packages.healthy-frontend = pkgs.buildNpmPackage {
         pname = "healthy-frontend";
         version = "0.1.0";
         src = ./frontend;
-        npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        npmDepsHash = "sha256-0+Y7RfnDnwItVLWOOySMNErIVAoyBkz2D9NIoQL3eKo=";
         installPhase = ''
           mkdir -p $out
           cp -r dist/* $out/
@@ -90,9 +90,7 @@
               after = ["network.target"];
 
               serviceConfig = {
-                ExecStart = "${
-                  self.packages.${pkgs.system}.backend
-                }/bin/backend --config ${configuration.configFile}";
+                ExecStart = "${lib.getExe self.packages.${pkgs.system}.healthy-backend} --config ${configuration.configFile}";
                 Restart = "always";
                 DynamicUser = true;
                 AmbientCapabilities = "CAP_NET_RAW";
@@ -105,9 +103,7 @@
               after = ["network.target"];
 
               serviceConfig = {
-                ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString configuration.port} --directory ${
-                  self.packages.${pkgs.system}.frontend
-                }";
+                ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString configuration.port} --directory ${self.packages.${pkgs.system}.healthy-frontend}";
                 Restart = "always";
                 DynamicUser = true;
               };
