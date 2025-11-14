@@ -48,13 +48,25 @@ async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
     let mut pinger = client.pinger(addr, PingIdentifier(24)).await;
     pinger.timeout(Duration::from_secs(1));
 
+    let mut ping_sequence = 0;
+
     loop {
-        let latency_milliseconds = pinger.ping(PingSequence(0), &[]).await.ok().map(|(_, latency)| latency.as_millis());
+        let latency_milliseconds = pinger
+            .ping(PingSequence(ping_sequence), &[])
+            .await
+            .ok()
+            .map(|(_, latency)| latency.as_millis());
+
         let status = DeviceStatus {
             name: device.name.clone(),
             ip: device.ip.clone(),
             latency_milliseconds,
         };
+
+        match latency_milliseconds.is_some() {
+            true => ping_sequence = ping_sequence.wrapping_add(1),
+            false => ping_sequence = 0,
+        }
 
         {
             let mut map = state.lock().await;
