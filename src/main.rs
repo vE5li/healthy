@@ -84,11 +84,11 @@ async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
 }
 
 async fn index() -> Html<&'static str> {
-    Html(include_str!("../index.html"))
+    Html(include_str!("../site/index.html"))
 }
 
 async fn favicon() -> Response {
-    let favicon_bytes = include_bytes!("../favicon.svg");
+    let favicon_bytes = include_bytes!("../site/favicon.svg");
     (
         [(header::CONTENT_TYPE, "image/svg+xml")],
         favicon_bytes.as_slice(),
