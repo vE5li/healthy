@@ -20,6 +20,8 @@
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
+          pkg-config
+          openssl
         ];
 
         # For any tools that need to see the rust toolchain src

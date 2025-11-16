@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use surge_ping::{Client, Config, PingIdentifier, PingSequence, ICMP};
 use tokio::sync::Mutex;
 
+const DOMAIN_TEST_INTERVAL: Duration = Duration::from_secs(20);
+const DEVICE_PING_INTERVAL: Duration = Duration::from_secs(5);
+
 #[derive(Parser)]
 struct Args {
     #[arg(short, long, default_value = "devices.json")]
@@ -30,7 +33,14 @@ struct DeviceConfig {
 
 #[derive(Deserialize)]
 struct HomeConfig {
+    domains: Vec<String>,
     devices: Vec<DeviceConfig>,
+}
+
+#[derive(Clone, Serialize)]
+struct DomainStatus {
+    domain: String,
+    status: usize,
 }
 
 #[derive(Clone, Serialize)]
@@ -40,9 +50,48 @@ struct DeviceStatus {
     latency_milliseconds: Option<u128>,
 }
 
-type DeviceMap = Arc<Mutex<BTreeMap<String, DeviceStatus>>>;
+#[derive(Default)]
+struct HomeStatus {
+    domains: BTreeMap<String, DomainStatus>,
+    devices: BTreeMap<String, DeviceStatus>,
+}
 
-async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
+#[derive(Serialize)]
+struct ExportHomeStatus {
+    domains: Vec<DomainStatus>,
+    devices: Vec<DeviceStatus>,
+}
+
+type HomeState = Arc<Mutex<HomeStatus>>;
+
+async fn test_domain(domain: String, state: HomeState) {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap();
+
+    loop {
+        let url = format!("http://{}", domain);
+        let status_code = match client.get(&url).send().await {
+            Ok(response) => response.status().as_u16() as usize,
+            Err(_) => 0,
+        };
+
+        let status = DomainStatus {
+            domain: domain.clone(),
+            status: status_code,
+        };
+
+        {
+            let mut state = state.lock().await;
+            state.domains.insert(domain.clone(), status);
+        }
+
+        tokio::time::sleep(DOMAIN_TEST_INTERVAL).await;
+    }
+}
+
+async fn ping_device(device: DeviceConfig, state: HomeState) {
     let addr: IpAddr = device.ip.parse().unwrap();
 
     let kind = match addr.is_ipv6() {
@@ -75,11 +124,11 @@ async fn ping_device(device: &DeviceConfig, state: DeviceMap) {
         }
 
         {
-            let mut map = state.lock().await;
-            map.insert(device.name.clone(), status);
+            let mut state = state.lock().await;
+            state.devices.insert(device.name.clone(), status);
         }
 
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        tokio::time::sleep(DEVICE_PING_INTERVAL).await;
     }
 }
 
@@ -96,9 +145,14 @@ async fn favicon() -> Response {
         .into_response()
 }
 
-async fn status(State(state): State<DeviceMap>) -> Json<Vec<DeviceStatus>> {
-    let map = state.lock().await;
-    let statuses = map.values().cloned().collect();
+async fn status(State(state): State<HomeState>) -> Json<ExportHomeStatus> {
+    let state = state.lock().await;
+
+    let statuses = ExportHomeStatus {
+        domains: state.domains.values().cloned().collect(),
+        devices: state.devices.values().cloned().collect(),
+    };
+
     Json(statuses)
 }
 
@@ -109,12 +163,21 @@ async fn main() {
     let config_file = fs::read_to_string(&args.config).unwrap();
     let config: HomeConfig = serde_json::from_str(&config_file).unwrap();
 
-    let state: DeviceMap = Arc::new(Mutex::new(BTreeMap::new()));
+    let state: HomeState = Arc::default();
+
+    for domain in config.domains {
+        let state = Arc::clone(&state);
+
+        tokio::spawn(async move {
+            test_domain(domain, state).await;
+        });
+    }
 
     for device in config.devices {
-        let device_state = Arc::clone(&state);
+        let state = Arc::clone(&state);
+
         tokio::spawn(async move {
-            ping_device(&device, device_state).await;
+            ping_device(device, state).await;
         });
     }
 

@@ -57,6 +57,9 @@
         .latency-disconnected {
             color: #555;
         }
+        :link { color: white; }
+        :visited { color: white; }
+        :link:active, :visited:active { color: #bbffbb; }
     </style>
 </head>
 <body>
@@ -65,38 +68,58 @@
     <script>
         async function checkStatus() {
             try {
-                const res = await fetch('/status');
-                const devices = await res.json();
+                const response = await fetch('/status');
+                const json = await response.json();
+                const domains = json.domains;
+                const devices = json.devices;
 
-                if (devices.length === 0) {
-                    document.getElementById('status').innerHTML = '<p>Loading...</p>';
-                } else {
-                    const rows = devices.map(device => {
-                        const className = device.latency_milliseconds ? 'connected' : 'disconnected';
-                        const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
-                        const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
+                const domainRows = domains.map(domain => {
+                    const className = (domain.status == 0 || domain.status == 404 || domain.status == 405) ? 'disconnected' : 'connected';
 
-                        return `<tr>
-                              <td>${device.name}</td>
-                              <td class=${className}>${device.ip}</td>
-                              <td class=${latencyClassName}>${latency}</td>
-                            </tr>`;
-                    }).join('');
+                    return `<tr>
+                          <td><a href="http://${domain.domain}">${domain.domain}</a></td>
+                          <td class=${className}>${domain.status}</td>
+                        </tr>`;
+                }).join('');
 
-                    const html = `<table>
-                      <thead>
-                        <tr>
-                          <th scope="col">Name</th>
-                          <th scope="col">Ip</th>
-                          <th scope="col">Latency</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${rows}
-                      </tbody>
-                    </table>`;
-                    document.getElementById('status').innerHTML = html;
-                }
+                const domainsHtml = `<table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Domain</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${domainRows}
+                  </tbody>
+                </table>`;
+
+                const deviceRows = devices.map(device => {
+                    const className = device.latency_milliseconds ? 'connected' : 'disconnected';
+                    const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
+                    const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
+
+                    return `<tr>
+                          <td>${device.name}</td>
+                          <td class=${className}>${device.ip}</td>
+                          <td class=${latencyClassName}>${latency}</td>
+                        </tr>`;
+                }).join('');
+
+                const devicesHtml = `<table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">Ip</th>
+                      <th scope="col">Latency</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${deviceRows}
+                  </tbody>
+                </table>`;
+
+                document.getElementById('status').innerHTML = domainsHtml + "<br/>" + devicesHtml;
             } catch (err) {
                 document.getElementById('status').innerHTML = '<p>Error loading status</p>';
             }

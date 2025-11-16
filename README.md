@@ -16,6 +16,9 @@ Define your devices in `devices.json`:
 
 ```json
 {
+  domains: [
+    "foo.bar.home"
+  ],
   "devices": [
     {
       "ip": "192.168.1.1",
@@ -38,4 +41,4 @@ Each device is pinged every 5 seconds.
 ## 📡 API
 
 - `GET /` - Web dashboard
-- `GET /status` - JSON endpoint with all device statuses
+- `GET /status` - JSON endpoint with all device and domain statuses
