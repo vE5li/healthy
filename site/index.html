@@ -77,7 +77,7 @@
                     const className = (domain.status == 0 || domain.status == 404 || domain.status == 405) ? 'disconnected' : 'connected';
 
                     return `<tr>
-                          <td><a href="http://${domain.domain}">${domain.domain}</a></td>
+                          <td><a href="${domain.domain}">${domain.domain}</a></td>
                           <td class=${className}>${domain.status}</td>
                         </tr>`;
                 }).join('');

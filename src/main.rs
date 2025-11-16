@@ -71,8 +71,7 @@ async fn test_domain(domain: String, state: HomeState) {
         .unwrap();
 
     loop {
-        let url = format!("http://{}", domain);
-        let status_code = match client.get(&url).send().await {
+        let status_code = match client.get(&domain).send().await {
             Ok(response) => response.status().as_u16() as usize,
             Err(_) => 0,
         };

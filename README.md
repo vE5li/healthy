@@ -17,7 +17,7 @@ Define your devices in `devices.json`:
 ```json
 {
   domains: [
-    "foo.bar.home"
+    "http://foo.bar.home"
   ],
   "devices": [
     {
