@@ -77,6 +77,89 @@
     <div id="status">Loading...</div>
 
     <script>
+        let initialized = false;
+
+        function sanitizeId(str) {
+            return str.replace(/[^a-zA-Z0-9]/g, '-');
+        }
+
+        function initializeTables(domains, devices) {
+            const domainRows = domains.map(domain => {
+                const domainId = sanitizeId(domain.domain);
+                return `<tr>
+                      <td><a href="${domain.domain}">${domain.domain}</a></td>
+                      <td id="domain-status-${domainId}"></td>
+                    </tr>`;
+            }).join('');
+
+            const domainsHtml = `<table class="domains-table">
+              <thead>
+                <tr>
+                  <th scope="col">Domain</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${domainRows}
+              </tbody>
+            </table>`;
+
+            const deviceRows = devices.map(device => {
+                const deviceId = sanitizeId(device.name);
+                return `<tr>
+                      <td>${device.name}</td>
+                      <td id="device-ip-${deviceId}"></td>
+                      <td id="device-latency-${deviceId}"></td>
+                    </tr>`;
+            }).join('');
+
+            const devicesHtml = `<table class="devices-table">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Ip</th>
+                  <th scope="col">Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${deviceRows}
+              </tbody>
+            </table>`;
+
+            document.getElementById('status').innerHTML = domainsHtml + "<br/>" + devicesHtml;
+        }
+
+        function updateStatus(domains, devices) {
+            domains.forEach(domain => {
+                const className = (domain.status == 0 || domain.status == 404 || domain.status == 405) ? 'disconnected' : 'connected';
+                const domainId = sanitizeId(domain.domain);
+                const cell = document.getElementById(`domain-status-${domainId}`);
+                if (cell && (cell.textContent != domain.status)) {
+                    cell.textContent = domain.status;
+                    cell.className = className;
+                }
+            });
+
+            devices.forEach(device => {
+                const className = device.latency_milliseconds ? 'connected' : 'disconnected';
+                const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
+                const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
+                const deviceId = sanitizeId(device.name);
+
+                const ipCell = document.getElementById(`device-ip-${deviceId}`);
+                if (ipCell && (ipCell.textContent != device.ip || ipCell.className != className)) {
+                    ipCell.textContent = device.ip;
+                    ipCell.className = className;
+                }
+
+                const latencyCell = document.getElementById(`device-latency-${deviceId}`);
+                if (latencyCell && (latencyCell.textContent != latency)) {
+                    latencyCell.textContent = latency;
+                    latencyCell.className = latencyClassName;
+                }
+            });
+        }
+
         async function checkStatus() {
             try {
                 const response = await fetch('/status');
@@ -84,53 +167,12 @@
                 const domains = json.domains;
                 const devices = json.devices;
 
-                const domainRows = domains.map(domain => {
-                    const className = (domain.status == 0 || domain.status == 404 || domain.status == 405) ? 'disconnected' : 'connected';
+                if (!initialized) {
+                    initializeTables(domains, devices);
+                    initialized = true;
+                }
 
-                    return `<tr>
-                          <td><a href="${domain.domain}">${domain.domain}</a></td>
-                          <td class=${className}>${domain.status}</td>
-                        </tr>`;
-                }).join('');
-
-                const domainsHtml = `<table class="domains-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Domain</th>
-                      <th scope="col">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${domainRows}
-                  </tbody>
-                </table>`;
-
-                const deviceRows = devices.map(device => {
-                    const className = device.latency_milliseconds ? 'connected' : 'disconnected';
-                    const latencyClassName = device.latency_milliseconds ? 'latency-connected' : 'latency-disconnected';
-                    const latency = device.latency_milliseconds ? `${device.latency_milliseconds} ms` : '-';
-
-                    return `<tr>
-                          <td>${device.name}</td>
-                          <td class=${className}>${device.ip}</td>
-                          <td class=${latencyClassName}>${latency}</td>
-                        </tr>`;
-                }).join('');
-
-                const devicesHtml = `<table class="devices-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Name</th>
-                      <th scope="col">Ip</th>
-                      <th scope="col">Latency</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${deviceRows}
-                  </tbody>
-                </table>`;
-
-                document.getElementById('status').innerHTML = domainsHtml + "<br/>" + devicesHtml;
+                updateStatus(domains, devices);
             } catch (err) {
                 document.getElementById('status').innerHTML = '<p>Error loading status</p>';
             }
