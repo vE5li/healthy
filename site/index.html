@@ -23,13 +23,24 @@
             text-align: left;
             overflow: hidden;
         }
-        th:nth-child(1), td:nth-child(1) {
+        table.domains-table th:nth-child(1),
+        table.domains-table td:nth-child(1) {
+            width: 85%;
+        }
+        table.domains-table th:nth-child(2),
+        table.domains-table td:nth-child(2) {
+            width: 15%;
+        }
+        table.devices-table th:nth-child(1),
+        table.devices-table td:nth-child(1) {
             width: 30%;
         }
-        th:nth-child(2), td:nth-child(2) {
+        table.devices-table th:nth-child(2),
+        table.devices-table td:nth-child(2) {
             width: 55%;
         }
-        th:nth-child(3), td:nth-child(3) {
+        table.devices-table th:nth-child(3),
+        table.devices-table td:nth-child(3) {
             width: 15%;
         }
         th {
@@ -82,7 +93,7 @@
                         </tr>`;
                 }).join('');
 
-                const domainsHtml = `<table>
+                const domainsHtml = `<table class="domains-table">
                   <thead>
                     <tr>
                       <th scope="col">Domain</th>
@@ -106,7 +117,7 @@
                         </tr>`;
                 }).join('');
 
-                const devicesHtml = `<table>
+                const devicesHtml = `<table class="devices-table">
                   <thead>
                     <tr>
                       <th scope="col">Name</th>
