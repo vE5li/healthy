@@ -131,7 +131,7 @@
 
         function updateStatus(domains, devices) {
             domains.forEach(domain => {
-                const className = (domain.status == 0 || domain.status == 404 || domain.status == 405) ? 'disconnected' : 'connected';
+                const className = (domain.status >= 200 && domain.status < 300) ? 'connected' : 'disconnected';
                 const domainId = sanitizeId(domain.domain);
                 const cell = document.getElementById(`domain-status-${domainId}`);
                 if (cell && (cell.textContent != domain.status)) {
