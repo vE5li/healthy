@@ -134,7 +134,7 @@
                 const className = (domain.status >= 200 && domain.status < 300) ? 'connected' : 'disconnected';
                 const domainId = sanitizeId(domain.domain);
                 const cell = document.getElementById(`domain-status-${domainId}`);
-                if (cell && (cell.textContent != domain.status)) {
+                if (cell && (cell.textContent !== domain.status)) {
                     cell.textContent = domain.status;
                     cell.className = className;
                 }
@@ -147,13 +147,13 @@
                 const deviceId = sanitizeId(device.name);
 
                 const ipCell = document.getElementById(`device-ip-${deviceId}`);
-                if (ipCell && (ipCell.textContent != device.ip || ipCell.className != className)) {
+                if (ipCell && (ipCell.textContent !== device.ip || ipCell.className !== className)) {
                     ipCell.textContent = device.ip;
                     ipCell.className = className;
                 }
 
                 const latencyCell = document.getElementById(`device-latency-${deviceId}`);
-                if (latencyCell && (latencyCell.textContent != latency)) {
+                if (latencyCell && (latencyCell.textContent !== latency)) {
                     latencyCell.textContent = latency;
                     latencyCell.className = latencyClassName;
                 }
