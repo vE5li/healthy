@@ -14,7 +14,7 @@
     flake-utils.lib.eachDefaultSystem (system: let
       overlays = [(import rust-overlay)];
       pkgs = (import nixpkgs) {inherit system overlays;};
-    in {
+    in rec {
       formatter = pkgs.alejandra;
 
       devShells.default = pkgs.mkShell {
@@ -28,7 +28,7 @@
         RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
       };
 
-      packages.healthy = pkgs.rustPlatform.buildRustPackage {
+      packages.healthy = pkgs.rustPlatform.buildRustPackage rec {
         pname = "healthy";
         version = "0.1.0";
         src = ./.;
@@ -41,7 +41,11 @@
         buildInputs = with pkgs; [
           openssl
         ];
+
+        meta.mainProgram = pname;
       };
+
+      packages.default = packages.healthy;
 
       nixosModules.default = {
         config,
@@ -79,7 +83,7 @@
             after = ["network.target"];
 
             serviceConfig = {
-              ExecStart = "${lib.getExe self.packages.${pkgs.system}.healthy} --config ${configuration.configFile} --port ${toString configuration.port}";
+              ExecStart = "${lib.getExe packages.healthy} --config ${configuration.configFile} --port ${toString configuration.port}";
               Restart = "always";
               DynamicUser = true;
               AmbientCapabilities = "CAP_NET_RAW";
